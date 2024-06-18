@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'home/css/styles.css' %}">
+    <title>{% block title %}Financial Data Insights{% endblock %}</title>
+</head>
+<body>
+    <div class="navbar">
+        <div class="navbar-brand">
+            <a href="#">Financial Data Insights</a>
+        </div>
+        <div class="navbar-links">
+            <a href="#">Home</a>
+            <a href="#">Login</a>
+            <a href="#">About</a>
+            <span>{{ user.username }}</span>
+        </div>
+    </div>
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+</body>
+</html>

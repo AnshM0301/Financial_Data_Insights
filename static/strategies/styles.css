@@ -1,0 +1,157 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    margin-left: 5px;
+    padding: 0;
+}
+
+.navbar {
+    background-color: #343a40;
+}
+
+.navbar-brand {
+    font-size: 1.5em;
+    color: #ffffff !important;
+}
+
+.nav-link {
+    color: #ffffff !important;
+}
+
+.container {
+    max-width: 70%;
+    padding: 20px;
+}
+
+.search-section input {
+    width: 70%;
+    display: inline-block;
+}
+
+.search-section button {
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.timeframe-section,
+.time-range-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.time-range-buttons button {
+    width: 80px;
+    margin: 5px;
+}
+
+.company-info {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.latest-price {
+    font-size: 24px;
+    font-weight: bold;
+    color: #007bff;
+}
+
+#chart-div {
+    max-width: fit-content;
+}
+
+#company-details {
+    padding-top: 5px;
+}
+
+/* Technical Analysis Section */
+#technical-analysis-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#technical-analysis-section h2 {
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.indicator-select {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.summary-box {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#indicator-status .status-box {
+    padding: 10px;
+    color: #fff;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.status-box.bullish {
+    background-color: #28a745;
+}
+
+.status-box.bearish {
+    background-color: #dc3545;
+}
+
+#vwap-chart {
+    margin-top: 20px;
+}
+
+
+
+
+.news-section {
+    padding: 20px;
+}
+
+.news-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.news-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 300px;
+}
+
+.news-card h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.news-card p {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.news-card span {
+    font-size: 12px;
+    color: gray;
+    margin-bottom: 10px;
+}
+
+.news-card a {
+    font-size: 14px;
+    color: blue;
+    text-decoration: underline;
+}

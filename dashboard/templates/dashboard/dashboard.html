@@ -1,0 +1,87 @@
+<!-- dashboard/templates/dashboard/dashboard.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'dashboard/styles.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Financial Data Insights</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="http://127.0.0.1:8000/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/strategies/">Strategies</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/dashboard/">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">About Us</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        <h1>Welcome to Your Dashboard, {{ request.user.first_name }}!</h1>
+        <p>Your current balance: ${{ portfolio.balance }}</p>
+        
+        <section id="portfolio-overview">
+            <h2>Portfolio Overview</h2>
+            <!-- Placeholder for charts -->
+        </section>
+
+        <section id="portfolio-holdings">
+            <h2>Portfolio Holdings</h2>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Buy Date</th>
+                        <th>Buy Price</th>
+                        <th>Quantity</th>
+                        <th>Current Value</th>
+                        <th>Profit/Loss</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for holding in holdings %}
+                    <tr>
+                        <td>{{ holding.ticker }}</td>
+                        <td>{{ holding.buy_date }}</td>
+                        <td>{{ holding.buy_price }}</td>
+                        <td>{{ holding.quantity }}</td>
+                        <td>{{ holding.current_value }}</td>
+                        <td><!-- Placeholder for profit/loss calculation --></td>
+                        <td><button class="btn btn-danger">Sell</button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section id="watchlist">
+            <h2>Watchlist</h2>
+            <ul>
+                {% for item in watchlist %}
+                <li>{{ item.ticker }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+</body>
+</html>

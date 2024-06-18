@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Data Insights - Strategies</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'strategies/styles.css' %}">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Financial Data Insights</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="http://127.0.0.1:8000/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/strategies/">Strategies</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/dashboard/">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">About Us</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="mt-5">
+        <div class="search-section mb-4 text-center">
+            <input type="text" id="company-name" class="form-control" placeholder="Enter company name" value="GOOG">
+            <button id="search-button" class="btn btn-primary mt-2">Search</button>
+        </div>
+        <div class="timeframe-section mb-4 text-center">
+            <label for="timeframe">Time Frame:</label>
+            <select id="timeframe" class="form-control d-inline-block w-auto">
+                <option value="1m">1 Minute</option>
+                <option value="5m">5 Minutes</option>
+                <option value="15m">15 Minutes</option>
+                <option value="30m">30 Minutes</option>
+                <option value="60m">1 Hour</option>
+                <option value="1d" selected>Daily</option>
+                <option value="1wk">Weekly</option>
+                <option value="1mo">Monthly</option>
+                <option value="3mo">Quarterly</option>
+            </select>
+        </div>
+        <div class="company-info">
+            <h1 id="company-name-title"></h1>
+            <p id="latest-price" class="latest-price"></p>
+            <button id="buy-button" class="btn btn-success">Buy</button>
+        </div>
+
+        <!-- Buy Modal -->
+        <div class="modal fade" id="buyModal" tabindex="-1" aria-labelledby="buyModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="buyModalLabel">Buy Stock</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="buy-form">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="quantity">Quantity</label>
+                                <input type="number" id="quantity" class="form-control" required>
+                            </div>
+                            <p>Total Price: $<span id="total-price">0.00</span></p>
+                            <button type="button" class="btn btn-primary" id="confirm-buy-button">Confirm Purchase</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-5 text-center">
+            <div id="candlestick-chart" style="height: 600px; width: 100%;"></div>
+        </div>
+        <div class="time-range-buttons mb-4 text-center">
+            <button data-range="1d" class="btn btn-outline-secondary btn-time-range">1 Day</button>
+            <button data-range="5d" class="btn btn-outline-secondary btn-time-range">5 Days</button>
+            <button data-range="1mo" class="btn btn-outline-secondary btn-time-range">1 Month</button>
+            <button data-range="6mo" class="btn btn-outline-secondary btn-time-range">6 Months</button>
+            <button data-range="1y" class="btn btn-outline-secondary btn-time-range">1 Year</button>
+            <button data-range="5y" class="btn btn-outline-secondary btn-time-range" selected>5 Years</button>
+            <button data-range="max" class="btn btn-outline-secondary btn-time-range">Max</button>
+        </div>
+        <div id="financial-details"></div>
+
+        <div id="financial-charts">
+            <div id="chart-performance"></div>
+            <div id="chart-debt"></div>
+            <div id="chart-conversion"></div>
+            <div id="chart-roe_roa"></div>
+        </div>
+
+        <!-- Technical Analysis Section -->
+        <div class="technical-analysis-section mt-5">
+            <h2 class="text-center">Technical Analysis</h2>
+            <div class="indicator-selection text-center mb-4">
+                <label for="indicator-select">Select Indicators:</label>
+                <select id="indicator-select" class="form-control d-inline-block w-auto" multiple>
+                    <option value="vwap" selected>VWAP</option>
+                    <option value="ema50">50-Day EMA</option>
+                    <option value="ema200">200-Day EMA</option>
+                    <option value="bollinger_bands">Bollinger Bands</option>
+                    <option value="rsi">RSI</option>
+                    <option value="macd">MACD</option>
+                    <option value="fibonacci">Fibonacci Retracement</option>
+                    <option value="support_resistance">Support and Resistance</option>
+                </select>
+                <button id="update-chart" class="btn btn-primary mt-2">Update Chart</button>
+            </div>
+            <div class="status-box text-center">
+                <h4>Status: <span id="trend-status" class="badge badge-secondary">Neutral</span></h4>
+            </div>
+            <div id="technical-chart" class="mt-4" style="height: 600px; width: 1000px;">{{ technical_chart|safe }}</div>
+            <div id="indicator-summary" class="mt-4">
+                <h4>Indicator Summary</h4>
+                <p id="indicator-description"> {{ indicator_description|safe }} </p>
+            </div>
+        </div>
+
+        <!-- Company News -->
+
+        <div class="news-section">
+            <h2>Latest News on <span id="full-company-name">{{ full_company_name }}</span></h2>
+            <div class="news-cards" id="news-cards">
+                {% for article in news_articles %}
+                    <div class="news-card">
+                        <img src="{{ article.urlToImage }}" class="card-img-top" alt="News Image"><br>
+                        <h3>{{ article.title }}</h3>
+                        <p>{{ article.description }}</p>
+                        <span>{{ article.source.name }} - {{ article.publishedAt|date:"d M Y" }}</span>
+                        <a href="{{ article.url }}" target="_blank">Read more </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script> 
+        $(document).ready(function() {
+            $('#buy-button').click(function() {
+        console.log('Buy button clicked');
+        $('#buyModal').modal('show');
+    });
+
+    $('#quantity').on('input', function() {
+        let quantity = $(this).val();
+        let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
+        let totalPrice = (quantity * currentPrice).toFixed(2);
+        $('#total-price').text(totalPrice);
+    });
+
+    $('#confirm-buy-button').click(function() {
+        let quantity = $('#quantity').val();
+        let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
+        let ticker = $('#company-name').val();
+        let csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+        console.log('Confirm buy button clicked');
+        console.log(`Sending request with ticker: ${ticker}, quantity: ${quantity}, price: ${currentPrice}`);
+
+        $.ajax({
+            url: `/dashboard/buy_stock/`,
+            method: 'POST',
+            data: {
+                'ticker': ticker,
+                'quantity': quantity,
+                'price': currentPrice,
+                'csrfmiddlewaretoken': csrfToken
+            },
+            success: function(response) {
+                console.log('AJAX request successful:', response);
+                $('#buyModal').modal('hide');
+                alert('Stock purchased successfully');
+                // Optionally, refresh the dashboard or update the holdings table
+            },
+            error: function(error) {
+                console.log('AJAX request failed:', error);
+                alert('Error purchasing stock');
+            }
+        });
+    });
+
+        });
+    </script>
+    <script src="{% static 'strategies/scripts.js' %}"></script>
+    
+</body>
+
+</html>
