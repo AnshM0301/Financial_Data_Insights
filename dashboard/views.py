@@ -1,12 +1,12 @@
 # dashboard/views.py
 
-import decimal
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponseBadRequest
 from .models import Portfolio, Holding, Watchlist
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
 import logging
+import decimal
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,16 @@ def dashboard(request):
     portfolio, created = Portfolio.objects.get_or_create(user=request.user)
     holdings = Holding.objects.filter(portfolio=portfolio)
     watchlist = Watchlist.objects.filter(user=request.user)
+
+    for holding in holdings:
+        try:
+            current_price = holding.get_current_price()
+            holding.current_price_value = current_price
+            holding.profit_loss = (decimal.Decimal(current_price) * holding.quantity) - (holding.buy_price * holding.quantity)
+        except Exception as e:
+            logger.error(f"Error fetching current price for {holding.ticker}: {e}")
+            holding.current_price_value = "N/A"
+            holding.profit_loss = "N/A"
 
     context = {
         'portfolio': portfolio,
@@ -36,7 +46,7 @@ def buy_stock(request):
 
         ticker = request.POST.get('ticker')
         quantity = request.POST.get('quantity')
-        current_price = decimal.Decimal(request.POST.get('price'))
+        current_price = request.POST.get('price')
 
         if not ticker or not quantity or not current_price:
             logger.error(f'Missing data: ticker={ticker}, quantity={quantity}, current_price={current_price}')
@@ -44,23 +54,19 @@ def buy_stock(request):
 
         try:
             quantity = int(quantity)
-            current_price = current_price
+            current_price = decimal.Decimal(current_price)
         except ValueError as e:
             logger.error(f'Invalid data types: {e}')
             return HttpResponseBadRequest('Invalid data types')
 
-        # Fetch the user's portfolio
         portfolio, created = Portfolio.objects.get_or_create(user=user)
 
-        # Calculate total cost
         total_cost = quantity * current_price
 
         if portfolio.balance >= total_cost:
-            # Deduct the total cost from the portfolio balance
             portfolio.balance -= total_cost
             portfolio.save()
 
-            # Create a new holding or update the existing one
             holding, created = Holding.objects.get_or_create(
                 portfolio=portfolio,
                 ticker=ticker,
@@ -68,11 +74,10 @@ def buy_stock(request):
             )
             if not created:
                 holding.quantity += quantity
-                holding.buy_price = current_price  # Update the price to the latest purchase price
+                holding.buy_price = current_price
                 holding.save()
 
             logger.info('Stock purchased successfully')
-
             return JsonResponse({'success': 'Stock purchased successfully'})
         else:
             logger.error('Insufficient funds')

@@ -52,7 +52,7 @@
                         <th>Buy Date</th>
                         <th>Buy Price</th>
                         <th>Quantity</th>
-                        <th>Current Value</th>
+                        <th>Current Price</th>
                         <th>Profit/Loss</th>
                         <th>Action</th>
                     </tr>
@@ -64,8 +64,10 @@
                         <td>{{ holding.buy_date }}</td>
                         <td>{{ holding.buy_price }}</td>
                         <td>{{ holding.quantity }}</td>
-                        <td>{{ holding.current_value }}</td>
-                        <td><!-- Placeholder for profit/loss calculation --></td>
+                        <td>{{ holding.current_price_value }}</td>
+                        <td class="{% if holding.profit_loss < 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ holding.profit_loss }}
+                        </td>
                         <td><button class="btn btn-danger">Sell</button></td>
                     </tr>
                     {% endfor %}
