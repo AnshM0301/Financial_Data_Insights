@@ -60,6 +60,8 @@
             <h1 id="company-name-title"></h1>
             <p id="latest-price" class="latest-price"></p>
             <button id="buy-button" class="btn btn-success">Buy</button>
+            {% csrf_token %}
+            <button id="watchlist-button" class="btn btn-warning">Add to Watchlist</button>
         </div>
 
         <!-- Buy Modal -->
@@ -80,7 +82,8 @@
                                 <input type="number" id="quantity" class="form-control" required>
                             </div>
                             <p>Total Price: $<span id="total-price">0.00</span></p>
-                            <button type="button" class="btn btn-primary" id="confirm-buy-button">Confirm Purchase</button>
+                            <button type="button" class="btn btn-primary" id="confirm-buy-button">Confirm
+                                Purchase</button>
                         </form>
                     </div>
                 </div>
@@ -127,7 +130,8 @@
             <div class="status-box text-center">
                 <h4>Status: <span id="trend-status" class="badge badge-secondary">Neutral</span></h4>
             </div>
-            <div id="technical-chart" class="mt-4" style="height: 600px; width: 1000px;">{{ technical_chart|safe }}</div>
+            <div id="technical-chart" class="mt-4" style="height: 600px; width: 1000px;">{{ technical_chart|safe }}
+            </div>
             <div id="indicator-summary" class="mt-4">
                 <h4>Indicator Summary</h4>
                 <p id="indicator-description"> {{ indicator_description|safe }} </p>
@@ -140,13 +144,13 @@
             <h2>Latest News on <span id="full-company-name">{{ full_company_name }}</span></h2>
             <div class="news-cards" id="news-cards">
                 {% for article in news_articles %}
-                    <div class="news-card">
-                        <img src="{{ article.urlToImage }}" class="card-img-top" alt="News Image"><br>
-                        <h3>{{ article.title }}</h3>
-                        <p>{{ article.description }}</p>
-                        <span>{{ article.source.name }} - {{ article.publishedAt|date:"d M Y" }}</span>
-                        <a href="{{ article.url }}" target="_blank">Read more </a>
-                    </div>
+                <div class="news-card">
+                    <img src="{{ article.urlToImage }}" class="card-img-top" alt="News Image"><br>
+                    <h3>{{ article.title }}</h3>
+                    <p>{{ article.description }}</p>
+                    <span>{{ article.source.name }} - {{ article.publishedAt|date:"d M Y" }}</span>
+                    <a href="{{ article.url }}" target="_blank">Read more </a>
+                </div>
                 {% endfor %}
             </div>
         </div>
@@ -155,55 +159,80 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
-    <script> 
-        $(document).ready(function() {
-            $('#buy-button').click(function() {
-        console.log('Buy button clicked');
-        $('#buyModal').modal('show');
-    });
+    <script>
+        $(document).ready(function () {
+            $('#buy-button').click(function () {
+                console.log('Buy button clicked');
+                $('#buyModal').modal('show');
+            });
 
-    $('#quantity').on('input', function() {
-        let quantity = $(this).val();
-        let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
-        let totalPrice = (quantity * currentPrice).toFixed(2);
-        $('#total-price').text(totalPrice);
-    });
+            $('#quantity').on('input', function () {
+                let quantity = $(this).val();
+                let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
+                let totalPrice = (quantity * currentPrice).toFixed(2);
+                $('#total-price').text(totalPrice);
+            });
 
-    $('#confirm-buy-button').click(function() {
-        let quantity = $('#quantity').val();
-        let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
-        let ticker = $('#company-name').val();
-        let csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+            $('#confirm-buy-button').click(function () {
+                let quantity = $('#quantity').val();
+                let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
+                let ticker = $('#company-name').val();
+                let csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
 
-        console.log('Confirm buy button clicked');
-        console.log(`Sending request with ticker: ${ticker}, quantity: ${quantity}, price: ${currentPrice}`);
+                console.log('Confirm buy button clicked');
+                console.log(`Sending request with ticker: ${ticker}, quantity: ${quantity}, price: ${currentPrice}`);
 
-        $.ajax({
-            url: `/dashboard/buy_stock/`,
-            method: 'POST',
-            data: {
-                'ticker': ticker,
-                'quantity': quantity,
-                'price': currentPrice,
-                'csrfmiddlewaretoken': csrfToken
-            },
-            success: function(response) {
-                console.log('AJAX request successful:', response);
-                $('#buyModal').modal('hide');
-                alert('Stock purchased successfully');
-                // Optionally, refresh the dashboard or update the holdings table
-            },
-            error: function(error) {
-                console.log('AJAX request failed:', error);
-                alert('Error purchasing stock');
-            }
-        });
-    });
+                $.ajax({
+                    url: `/dashboard/buy_stock/`,
+                    method: 'POST',
+                    data: {
+                        'ticker': ticker,
+                        'quantity': quantity,
+                        'price': currentPrice,
+                        'csrfmiddlewaretoken': csrfToken
+                    },
+                    success: function (response) {
+                        console.log('AJAX request successful:', response);
+                        $('#buyModal').modal('hide');
+                        alert('Stock purchased successfully');
+                        // Optionally, refresh the dashboard or update the holdings table
+                    },
+                    error: function (error) {
+                        console.log('AJAX request failed:', error);
+                        alert('Error purchasing stock');
+                    }
+                });
+            });
+
+            $('#watchlist-button').click(function () {
+                let ticker = $('#company-name').val();
+                let csrfToken = $('input[name = "csrfmiddlewaretoken"]').val();
+
+                console.log('Watchlist button clicked');
+                console.log('Sending request to add ${ticker} to watchlist');
+
+                $.ajax({
+                    url: `/dashboard/add_to_watchlist/`,
+                    method: 'POST',
+                    data: {
+                        'ticker': ticker,
+                        'csrfmiddlewaretoken': csrfToken
+                    },
+                    success: function (response) {
+                        console.log('AJAX req successful: ', response);
+                        alert('Stock added to watchlist successfully');
+                    },
+                    error: function (error) {
+                        console.log('AJAX req failed :( : ', error);
+                        alert('Error adding the Stock to the watchlist');
+                    }
+                });
+            });
 
         });
     </script>
     <script src="{% static 'strategies/scripts.js' %}"></script>
-    
+
 </body>
 
 </html>

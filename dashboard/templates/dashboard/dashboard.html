@@ -1,15 +1,16 @@
-<!-- dashboard/templates/dashboard/dashboard.html -->
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'dashboard/styles.css' %}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
 </head>
+
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <a class="navbar-brand" href="#">Financial Data Insights</a>
@@ -34,14 +35,66 @@
             </ul>
         </div>
     </nav>
-    <div class="container mt-5">
-        <h1>Welcome to Your Dashboard, {{ request.user.first_name }}!</h1>
-        <p>Your current balance: ${{ portfolio.balance }}</p>
-        
-        <section id="portfolio-overview">
-            <h2>Portfolio Overview</h2>
-            <!-- Placeholder for charts -->
-        </section>
+    <div class="container-fluid mt-5">
+        <div class="jumbotron text-center">
+            <h1>Welcome to Your Dashboard, {{ request.user.first_name }}!</h1>
+            <p>"The stock market is filled with individuals who know the price of everything, but the value of nothing."
+                – Philip Fisher</p>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary mb-3">
+                    <div class="card-header">Balance</div>
+                    <div class="card-body">
+                        <h5 class="card-title">${{ portfolio.balance }}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-header">Net Worth</div>
+                    <div class="card-body">
+                        <h5 class="card-title">${{ net_worth }}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info mb-3">
+                    <div class="card-header">My Investment</div>
+                    <div class="card-body">
+                        <h5 class="card-title">${{ total_investment }}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning mb-3">
+                    <div class="card-header">Profit/Loss (Unrealized)</div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ unrealized_profit_loss }}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-danger mb-3">
+                    <div class="card-header">Profit/Loss (Realized)</div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ realized_profit_loss }}</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plotly Charts -->
+        <div class="row">
+            <div class="col-md-6">
+                <h2>Sector Allocation</h2>
+                <div id="sector-allocation-chart"></div>
+            </div>
+            <div class="col-md-6">
+                <h2>Profit/Loss Distribution</h2>
+                <div id="profit-loss-chart"></div>
+            </div>
+        </div>
 
         <section id="portfolio-holdings">
             <h2>Portfolio Holdings</h2>
@@ -60,7 +113,7 @@
                 <tbody>
                     {% for holding in holdings %}
                     <tr>
-                        <td>{{ holding.ticker }}</td>
+                        <td><a href="{% url 'strategies' %}?company_name={{ holding.ticker }}">{{ holding.ticker }}</a></td>
                         <td>{{ holding.buy_date }}</td>
                         <td>{{ holding.buy_price }}</td>
                         <td>{{ holding.quantity }}</td>
@@ -68,22 +121,190 @@
                         <td class="{% if holding.profit_loss < 0 %}text-danger{% else %}text-success{% endif %}">
                             {{ holding.profit_loss }}
                         </td>
-                        <td><button class="btn btn-danger">Sell</button></td>
+                        <td><button class="btn btn-danger"
+                                onclick="openSellModal('{{ holding.ticker }}', '{{ holding.quantity }}', '{{ holding.current_price_value }}')">Sell</button>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </section>
 
-        <section id="watchlist">
-            <h2>Watchlist</h2>
-            <ul>
-                {% for item in watchlist %}
-                <li>{{ item.ticker }}</li>
-                {% endfor %}
-            </ul>
+        <!-- Modal for selling stocks -->
+        <div class="modal fade" id="sellModal" tabindex="-1" role="dialog" aria-labelledby="sellModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="sellModalLabel">Sell Stock</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="sellForm">
+                            <div class="form-group">
+                                <label for="sellQuantity">Quantity</label>
+                                <input type="number" class="form-control" id="sellQuantity" min="1" required>
+                            </div>
+                            <input type="hidden" id="sellTicker">
+                            <input type="hidden" id="sellCurrentPrice">
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="confirmSellStock()">Sell</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section id="watchlist-main">
+            <div class="col-md-6">
+                <h2>Watchlist</h2>
+                <form id="add-to-watchlist-form">
+                    <div class="form-group">
+                        <input type="text" id="ticker" name="ticker" class="form-control"
+                            placeholder="Enter Ticker Symbol" required>
+                        <button type="submit" class="btn btn-primary mt-2">Add to Watchlist</button>
+                    </div>
+                </form>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Ticker</th>
+                            <th scope="col">Current Price</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in watchlist %}
+                        <tr>
+                            <td><a href="{% url 'strategies' %}?company_name={{ item.ticker }}">{{ item.ticker }}</a>
+                            </td>
+                            <td id="price-{{ item.ticker }}">Loading...</td>
+                            <td>
+                                <button class="btn btn-danger remove-from-watchlist"
+                                    data-ticker="{{ item.ticker }}">Remove</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </section>
+
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        function openSellModal(ticker, maxQuantity, currentPrice) {
+            $('#sellTicker').val(ticker);
+            $('#sellQuantity').attr('max', maxQuantity);
+            $('#sellCurrentPrice').val(currentPrice);
+            $('#sellModal').modal('show');
+        }
+
+        function confirmSellStock() {
+            const ticker = $('#sellTicker').val();
+            const quantity = parseInt($('#sellQuantity').val());
+            const currentPrice = parseFloat($('#sellCurrentPrice').val());
+
+            if (quantity > 0) {
+                $.ajax({
+                    url: '/dashboard/sell_stock/',
+                    method: 'POST',
+                    data: JSON.stringify({ ticker: ticker, quantity: quantity, current_price: currentPrice }),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        location.reload();
+                    },
+                    error: function (xhr, status, error) {
+                        alert('Error selling stock: ' + xhr.responseText);
+                    }
+                });
+            } else {
+                alert('Invalid quantity');
+            }
+        }
+
+        // Parse the JSON data
+        const pieChartJson = JSON.parse('{{ pie_chart_json|escapejs }}');
+        const barChartJson = JSON.parse('{{ bar_chart_json|escapejs }}');
+
+        console.log('Pie Chart JSON:', pieChartJson);
+        console.log('Bar Chart JSON:', barChartJson);
+
+        // Render the Pie Chart
+        Plotly.newPlot('sector-allocation-chart', pieChartJson.data, pieChartJson.layout);
+
+        // Render the Bar Chart
+        Plotly.newPlot('profit-loss-chart', barChartJson.data, barChartJson.layout);
+
+
+        $(document).ready(function () {
+            // Fetch and display current prices for watchlist
+            $.ajax({
+                type: 'GET',
+                url: '{% url "get_watchlist" %}',
+                success: function (response) {
+                    response.forEach(item => {
+                        $('#price-' + item.ticker).text(item.current_price);
+                    });
+                },
+                error: function (error) {
+                    console.error('Failed to fetch watchlist prices:', error);
+                }
+            });
+
+            // Handle add to watchlist form submission
+            $('#add-to-watchlist-form').submit(function (event) {
+                event.preventDefault();
+                let ticker = $('#ticker').val();
+                $.ajax({
+                    type: 'POST',
+                    url: '{% url "add_to_watchlist" %}',
+                    data: {
+                        'ticker': ticker,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function (response) {
+                        alert('Stock added to watchlist');
+                        location.reload();
+                    },
+                    error: function (error) {
+                        alert('Failed to add to watchlist');
+                    }
+                });
+            });
+
+            // Handle remove from watchlist button click
+            $(document).on('click', '.remove-from-watchlist', function () {
+                let ticker = $(this).data('ticker');
+                $.ajax({
+                    type: 'POST',
+                    url: '{% url "remove_from_watchlist" %}',
+                    data: {
+                        'ticker': ticker,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function (response) {
+                        alert('Stock removed from watchlist');
+                        location.reload();
+                    },
+                    error: function (error) {
+                        alert('Failed to remove from watchlist');
+                    }
+                });
+            });
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"
+        integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+"
+        crossorigin="anonymous"></script>
 </body>
+
 </html>

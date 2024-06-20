@@ -1,6 +1,6 @@
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #f4f4f4;
+    background-color: #f8f9fa;
     color: #333;
     margin-left: 5px;
     padding: 0;
@@ -17,4 +17,35 @@ body {
 
 .nav-link {
     color: #ffffff !important;
+}
+
+.jumbotron {
+    background-color: #e9ecef;
+    padding: 2rem 1rem;
+    margin-bottom: 2rem;
+}
+
+.card-title {
+    font-size: 1.5rem;
+}
+
+.table thead th {
+    background-color: #343a40;
+    color: #ffffff;
+}
+
+.table tbody td {
+    vertical-align: middle;
+}
+
+.table tbody td.text-danger {
+    color: #dc3545 !important;
+}
+
+.table tbody td.text-success {
+    color: #28a745 !important;
+}
+
+#portfolio-holdings, #watchlist {
+    margin-top: 2rem;
 }

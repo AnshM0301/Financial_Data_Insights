@@ -10,7 +10,8 @@ import requests
 NEWS_API_KEY = 'a99f21bd3dae43bc962eb23c86600461' 
 
 def strategies(request):
-    company_name = request.GET.get('company', 'GOOG')
+    company_name = request.GET.get('company_name', 'GOOG')
+    print(f"Company Name from query: {company_name}")  # Debug print statement
     news_articles = fetch_company_news(company_name)
     technical_chart, trend_status, indicator_description = technical_analysis(request, company_name)
     context = {

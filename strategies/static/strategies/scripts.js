@@ -27,6 +27,7 @@ $(document).ready(function() {
         $('#buyModal').modal('show');
     });
 
+
     $('#quantity').on('input', function() {
         let quantity = $(this).val();
         let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
@@ -64,6 +65,31 @@ $(document).ready(function() {
             }
         });
     });
+
+    // $('#watchlist-button').click(function() {
+    //     let ticker = $('#company-name').val();
+    //     let csrfToken = $('input[name = "csrfmiddlewaretoken"]').val();
+
+    //     console.log('Watchlist button clicked');
+    //     console.log('Sending request to add ${ticker} to watchlist');
+
+    //     $.ajax({
+    //         url: `/dashboard/add_to_watchlist`,
+    //         method: 'POST',
+    //         data:{
+    //             'ticker':ticker,
+    //             'csrfmiddlewaretoken' : csrfToken
+    //         },
+    //         success: function (response){
+    //             console.log('AJAX req successful: ', response);
+    //             alert('Stock added to watchlist successfully');
+    //         },
+    //         error: function(error){
+    //             console.log('AJAX req failed :( : ', error);
+    //             alert('Error adding the Stock to the watchlist');
+    //         }
+    //     });
+    // });
 
     function fetchData(timeRange = '5y') {
         let companyName = $('#company-name').val() || 'GOOG';
