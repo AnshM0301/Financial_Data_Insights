@@ -1,95 +1,7 @@
 $(document).ready(function() {
-    fetchData();
-
-    $('#search-button').click(function() {
-        console.log('Search button clicked');
-        fetchData();
-    });
-
-    $('#timeframe').change(function() {
-        console.log('Timeframe changed');
-        fetchData();
-    });
-
-    $('.btn-time-range').click(function() {
-        let timeRange = $(this).data('range');
-        console.log('Time range button clicked:', timeRange);
-        fetchData(timeRange);
-    });
-
-    $('#update-chart').click(function() {
-        console.log('Update chart button clicked');
-        fetchTechnicalAnalysis();
-    });
-
-    $('#buy-button').click(function() {
-        console.log('Buy button clicked');
-        $('#buyModal').modal('show');
-    });
-
-
-    $('#quantity').on('input', function() {
-        let quantity = $(this).val();
-        let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
-        let totalPrice = (quantity * currentPrice).toFixed(2);
-        $('#total-price').text(totalPrice);
-    });
-
-    $('#confirm-buy-button').click(function() {
-        let quantity = $('#quantity').val();
-        let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
-        let ticker = $('#company-name').val();
-        let csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-
-        console.log('Confirm buy button clicked');
-        console.log(`Sending request with ticker: ${ticker}, quantity: ${quantity}, price: ${currentPrice}`);
-
-        $.ajax({
-            url: `/dashboard/buy_stock/`,
-            method: 'POST',
-            data: {
-                'ticker': ticker,
-                'quantity': quantity,
-                'price': currentPrice,
-                'csrfmiddlewaretoken': csrfToken
-            },
-            success: function(response) {
-                console.log('AJAX request successful:', response);
-                $('#buyModal').modal('hide');
-                alert('Stock purchased successfully');
-                // Optionally, refresh the dashboard or update the holdings table
-            },
-            error: function(error) {
-                console.log('AJAX request failed:', error);
-                alert('Error purchasing stock');
-            }
-        });
-    });
-
-    // $('#watchlist-button').click(function() {
-    //     let ticker = $('#company-name').val();
-    //     let csrfToken = $('input[name = "csrfmiddlewaretoken"]').val();
-
-    //     console.log('Watchlist button clicked');
-    //     console.log('Sending request to add ${ticker} to watchlist');
-
-    //     $.ajax({
-    //         url: `/dashboard/add_to_watchlist`,
-    //         method: 'POST',
-    //         data:{
-    //             'ticker':ticker,
-    //             'csrfmiddlewaretoken' : csrfToken
-    //         },
-    //         success: function (response){
-    //             console.log('AJAX req successful: ', response);
-    //             alert('Stock added to watchlist successfully');
-    //         },
-    //         error: function(error){
-    //             console.log('AJAX req failed :( : ', error);
-    //             alert('Error adding the Stock to the watchlist');
-    //         }
-    //     });
-    // });
+    function numberWithCommas(x) {
+        return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
 
     function fetchData(timeRange = '5y') {
         let companyName = $('#company-name').val() || 'GOOG';
@@ -109,10 +21,45 @@ $(document).ready(function() {
                 console.log('Data fetched successfully:', data);
                 $('#company-name-title').text(data.financial_details["Name"]);
                 $('#latest-price').text(`Latest Price: $${data.latest_price}`);
-                $('#financial-details').empty();
-                $.each(data.financial_details, function(key, value) {
-                    $('#financial-details').append(`<p><strong>${key}:</strong> ${value}</p>`);
+                $('#key-stats-details').empty();
+                $('#about-company-details').empty();
+
+                let keyStats = ['Market Capitalization', 'Dividend Yield', 'PE Ratio', 'EPS', 'Net Income', 'Revenue', 'Shares Float', 'Beta'];
+                let aboutCompany = ['Sector', 'Industry', 'Headquarters', 'Total Employees', 'Website', 'Summary'];
+
+                keyStats.forEach(key => {
+                    let value = data.financial_details[key];
+                    if (typeof value === 'number') {
+                        value = numberWithCommas(value);
+                    }
+                    $('#key-stats-details').append(`<p><strong>${key}:</strong> ${value}</p>`);
                 });
+
+                aboutCompany.forEach(key => {
+                    let value = data.financial_details[key];
+                    if (key === 'Website' && value !== 'N/A') {
+                        value = `<a href="${value}" target="_blank">${value}</a>`;
+                    } else if (key === 'Total Employees' && typeof value === 'number') {
+                        value = numberWithCommas(value);
+                    }
+                    if (key === 'Summary') {
+                        let summaryText = value.length > 100 ? value.substring(0, 100) + '...' : value;
+                        let showMoreLink = value.length > 100 ? `<a href="#" class="show-more">Show more</a>` : '';
+                        $('#about-company-details').append(`<p><strong>${key}:</strong> <span class="summary-text">${summaryText}</span> ${showMoreLink}</p>`);
+                    } else {
+                        $('#about-company-details').append(`<p><strong>${key}:</strong> ${value}</p>`);
+                    }
+                });
+
+                $('#about-company-name').text(data.financial_details["Name"]);
+
+                $('.show-more').click(function(e) {
+                    e.preventDefault();
+                    let fullText = data.financial_details['Summary'];
+                    $(this).siblings('.summary-text').text(fullText);
+                    $(this).remove();
+                });
+
                 $('#candlestick-chart').html(data.graph_div);
                 $('#chart-performance').html(data.charts.performance);
                 $('#chart-debt').html(data.charts.debt);
@@ -186,4 +133,70 @@ $(document).ready(function() {
             }
         });
     }
+
+    $('#search-button').click(function() {
+        console.log('Search button clicked');
+        fetchData();
+    });
+
+    $('#timeframe').change(function() {
+        console.log('Timeframe changed');
+        fetchData();
+    });
+
+    $('.btn-time-range').click(function() {
+        let timeRange = $(this).data('range');
+        console.log('Time range button clicked:', timeRange);
+        fetchData(timeRange);
+    });
+
+    $('#update-chart').click(function() {
+        console.log('Update chart button clicked');
+        fetchTechnicalAnalysis();
+    });
+
+    $('#buy-button').click(function() {
+        console.log('Buy button clicked');
+        $('#buyModal').modal('show');
+    });
+
+    $('#quantity').on('input', function() {
+        let quantity = $(this).val();
+        let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
+        let totalPrice = (quantity * currentPrice).toFixed(2);
+        $('#total-price').text(totalPrice);
+    });
+
+    $('#confirm-buy-button').click(function() {
+        let quantity = $('#quantity').val();
+        let currentPrice = parseFloat($('#latest-price').text().replace('Latest Price: $', ''));
+        let ticker = $('#company-name').val();
+        let csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+        console.log('Confirm buy button clicked');
+        console.log(`Sending request with ticker: ${ticker}, quantity: ${quantity}, price: ${currentPrice}`);
+
+        $.ajax({
+            url: `/dashboard/buy_stock/`,
+            method: 'POST',
+            data: {
+                'ticker': ticker,
+                'quantity': quantity,
+                'price': currentPrice,
+                'csrfmiddlewaretoken': csrfToken
+            },
+            success: function(response) {
+                console.log('AJAX request successful:', response);
+                $('#buyModal').modal('hide');
+                alert('Stock purchased successfully');
+                // Optionally, refresh the dashboard or update the holdings table
+            },
+            error: function(error) {
+                console.log('AJAX request failed:', error);
+                alert('Error purchasing stock');
+            }
+        });
+    });
+
+    fetchData();
 });

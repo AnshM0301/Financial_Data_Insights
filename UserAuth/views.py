@@ -46,7 +46,7 @@ def login_view(request):
 def logout_view(request):  # Add logout view
     logout(request)
     messages.info(request, 'You have been logged out')
-    return redirect('login')  # Redirect to login page after logout
+    return redirect('home')  # Redirect to login page after logout
 
 def profile(request): 
     return render(request, 'UserAuth/profile.html')

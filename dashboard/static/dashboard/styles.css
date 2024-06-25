@@ -2,50 +2,166 @@ body {
     font-family: 'Roboto', sans-serif;
     background-color: #f8f9fa;
     color: #333;
-    margin-left: 5px;
-    padding: 0;
+    margin: 0;
+    padding-top: 60px;
 }
 
-.navbar {
-    background-color: #343a40;
-}
+/* .container-fluid {
+    padding: 20px;
+} */
 
-.navbar-brand {
-    font-size: 1.5em;
-    color: #ffffff !important;
-}
-
-.nav-link {
-    color: #ffffff !important;
-}
-
-.jumbotron {
+/* .jumbotron {
     background-color: #e9ecef;
     padding: 2rem 1rem;
     margin-bottom: 2rem;
 }
 
-.card-title {
+.jumbotron .display-4 {
+    font-size: 2.5rem;
+}
+
+.jumbotron .lead {
+    font-size: 1.25rem;
+} */
+
+
+.card {
+    border: none;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card .card-header {
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+.card .card-title {
     font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.card-primary {
+    background-color: #007bff !important;
+}
+
+.card-success {
+    background-color: #28a745 !important;
+}
+
+.card-info {
+    background-color: #17a2b8 !important;
+}
+
+.card-warning {
+    background-color: #ffc107 !important;
+}
+
+.card-danger {
+    background-color: #dc3545 !important;
+}
+
+.card-dark {
+    background-color: #343a40 !important;
+}
+
+
+
+.table {
+    margin-top: 20px;
 }
 
 .table thead th {
     background-color: #343a40;
     color: #ffffff;
+    border: none;
 }
 
 .table tbody td {
     vertical-align: middle;
+    border-top: none;
 }
 
-.table tbody td.text-danger {
+.table tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #ddd;
+}
+
+.table .text-danger {
     color: #dc3545 !important;
 }
 
-.table tbody td.text-success {
+.table .text-success {
     color: #28a745 !important;
 }
 
-#portfolio-holdings, #watchlist {
-    margin-top: 2rem;
+
+.chart-container {
+    width: 100%;
+    height: 400px;
+}
+
+
+.gradient-button {
+    background: linear-gradient(45deg, #007bff, #28a745);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-transform: uppercase;
+    transition: background 0.3s ease;
+}
+
+.gradient-button:hover {
+    background: linear-gradient(45deg, #0056b3, #1c7430);
+}
+
+
+.modal-content {
+    border-radius: 8px;
+}
+
+.modal-header {
+    border-bottom: none;
+}
+
+.modal-footer {
+    border-top: none;
+}
+
+.modal-footer .btn {
+    min-width: 100px;
+}
+
+
+#watchlist-main {
+    margin-top: 40px;
+}
+
+#watchlist-main .input-group {
+    width: 100%;
+}
+
+#watchlist-main .input-group .form-control {
+    width: 70%;
+}
+
+#watchlist-main .input-group .btn {
+    width: 30%;
+}
+
+
+.form-control {
+    border-radius: 4px;
+    box-shadow: none;
+    border: 1px solid #ced4da;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }

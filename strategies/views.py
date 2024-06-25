@@ -4,11 +4,12 @@ import yfinance as yf
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots 
 import pandas as pd
-
+from django.contrib.auth.decorators import login_required
 import requests
 
 NEWS_API_KEY = 'a99f21bd3dae43bc962eb23c86600461' 
 
+@login_required(login_url="/UserAuth/login/")
 def strategies(request):
     company_name = request.GET.get('company_name', 'GOOG')
     print(f"Company Name from query: {company_name}")  # Debug print statement
@@ -30,9 +31,9 @@ def search_company(request):
         time_range = request.GET.get('time_range', '5y')
         if ticker:
             timeframe = request.GET.get('timeframe', '1d')
-            data = fetch_stock_data(ticker, timeframe, time_range)
+            hist_df, data = fetch_stock_data(ticker, timeframe, time_range)
             if data is not None:
-                fig = create_candlestick_chart(data, company_name)
+                fig = create_candlestick_chart(hist_df, data, company_name)
                 graph_div = fig.to_html(full_html=False)
                 latest_price = data['Close'].iloc[-1]
                 financial_details = fetch_financial_details(ticker)
@@ -75,7 +76,11 @@ def fetch_company_news_view(request):
 def fetch_stock_data(ticker, interval, time_range):
     try:
         data = yf.download(ticker, period=time_range, interval=interval)
-        return data if not data.empty else None
+        hist_df = data.reset_index()
+        hist_df['Date'] = pd.to_datetime(hist_df['Date'])
+        hist_df.set_index('Date', inplace=True)
+
+        return hist_df, data if not data.empty else None
     except Exception as e:
         print(f"Error fetching data: {e}")      
         return None
@@ -106,7 +111,7 @@ def fetch_financial_details(ticker):
         print(f"Error fetching financial details: {e}")
         return {}
 
-def create_candlestick_chart(data, company_name):
+def create_candlestick_chart(hist_df, data, company_name):
     fig = go.Figure()
     fig.add_trace(go.Candlestick(
         x=data.index,
@@ -124,13 +129,15 @@ def create_candlestick_chart(data, company_name):
         yaxis_title='Stock Price',
         xaxis_rangeslider_visible=False,
         yaxis2=dict(title='Volume', overlaying='y', side='right',position=1.0, range=[0, 300_000_000]),
-        xaxis=dict(type='category', tickangle=-45, tickmode='auto', nticks=20),
+        xaxis=dict(type='category', tickangle=-45, tickmode='array', 
+                        tickvals=hist_df.index[::round(len(hist_df.index) / 20)],  # Adjust this to get 2-3 months interval
+                        ticktext=[date.strftime('%Y-%m-%d') for date in hist_df.index[::round(len(hist_df.index) / 20)]],
+                        tickformat='%Y-%m-%d',nticks=20),
         margin=dict(l=0, r=0, t=30, b=20),
         height=600,
         width=1200
     )
     return fig
-
 
 
 def get_company_data(ticker):
@@ -275,8 +282,13 @@ def create_financial_charts(ticker, time_range):
 
 def technical_analysis(request, ticker):
     data = yf.download(tickers=ticker, period='1y', interval='1d')
+
+    hist_df = data.reset_index()
+    hist_df['Date'] = pd.to_datetime(hist_df['Date'])
+    hist_df.set_index('Date', inplace=True)
+
                        
-    indicators = request.GET.get('indicators', 'VWAP')
+    indicators = request.GET.getlist('indicators', 'VWAP')
 
     print("Indicators:", indicators)  # Debug statement
 
@@ -369,7 +381,10 @@ def technical_analysis(request, ticker):
         yaxis_title='Stock Price',
         xaxis_rangeslider_visible=False,
         yaxis2=dict(title='Volume', overlaying='y', side='right', position=1.0, range=[0, 300_000_000]),
-        xaxis=dict(type='category', tickangle=-45, tickmode='auto', nticks=20),
+         xaxis=dict(type='category', tickangle=-45, tickmode='array', 
+                        tickvals=hist_df.index[::round(len(hist_df.index) / 20)],  # Adjust this to get 2-3 months interval
+                        ticktext=[date.strftime('%Y-%m-%d') for date in hist_df.index[::round(len(hist_df.index) / 20)]],
+                        tickformat='%Y-%m-%d',nticks=20),
         margin=dict(l=0, r=0, t=30, b=20),
         height=600,
         width=1200
@@ -381,7 +396,7 @@ def technical_analysis(request, ticker):
 def fetch_company_news(company_name):
 #  url = f'https://newsapi.org/v2/top-headlines?category=business&language=en&pageSize=20&apiKey={NEWS_API_KEY}'
 
-    url = f'https://newsapi.org/v2/everything?q={company_name}&apiKey={NEWS_API_KEY}'
+    url = f'https://newsapi.org/v2/everything?q={company_name}&language=en&sortBy=relevancy&apiKey={NEWS_API_KEY}'
     response = requests.get(url)
     if response.status_code == 200:
         news_data = response.json()
@@ -393,6 +408,6 @@ def fetch_company_news(company_name):
                 if not article.get('urlToImage'):
                     article['urlToImage'] = default_image_url
                 valid_articles.append(article)
-        return valid_articles[:8]
+        return valid_articles[:9]
     else:
         return []

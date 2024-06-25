@@ -6,14 +6,14 @@ from plotly.io import to_html
 import requests
 
 
-tickers = ['^GSPC', '^NSEI', '^BSESN', '^NSEBANK', '^NDX', '^DJI', '^FTSE']
-names = ['S&P 500', 'NIFTY 50', 'BSE', 'BANK NIFTY', 'Nasdaq', 'Dow Jones', 'UK 100']
-countries = ['USA', 'India', 'India', 'India', 'USA', 'USA', 'UK']
+tickers = ['^GSPC', '^NSEI', '^BSESN', '^NSEBANK', '^NDX', '^DJI', '^FTSE', '^N225', '^BTC-USD']
+names = ['S&P 500', 'NIFTY 50', 'BSE', 'BANK NIFTY', 'Nasdaq', 'Dow Jones', 'UK 100', 'Nikkei 225 ', 'Bitcoin USD']
+countries = ['USA', 'India', 'India', 'India', 'USA', 'USA', 'UK', 'Japan', 'US']
 
 NEWS_API_KEY = 'a99f21bd3dae43bc962eb23c86600461' 
 
 def fetch_news():
-    url = f'https://newsapi.org/v2/top-headlines?category=business&language=en&pageSize=20&apiKey={NEWS_API_KEY}'
+    url = f'https://newsapi.org/v2/everything?q=finance OR stock OR market&language=en&pageSize=15&sortBy=relevancy&apiKey={NEWS_API_KEY}'
     response = requests.get(url)
     articles = response.json().get('articles', [])
     
@@ -37,6 +37,9 @@ def retrieve_data(ticker: str):
     hist_df = ticker_obj.history(period="5y")
     hist_df = hist_df.reset_index()
     
+    hist_df['Date'] = pd.to_datetime(hist_df['Date'])
+    hist_df.set_index('Date', inplace=True)
+
     return hist_df, ticker_info
 
 def create_candlestick_chart(hist_df: pd.DataFrame):
@@ -47,7 +50,7 @@ def create_candlestick_chart(hist_df: pd.DataFrame):
             high=hist_df['High'],
             low=hist_df['Low'],
             close=hist_df['Close'],
-            name='Price'
+            name='Price',
         ))
         
 
@@ -55,10 +58,13 @@ def create_candlestick_chart(hist_df: pd.DataFrame):
             # title=f'{company_name.capitalize()} Stock Price and Volume',
             yaxis_title='Stock Price',
             xaxis_rangeslider_visible=False,
-            xaxis=dict(type='category', tickangle=-45, tickmode='auto', nticks=20),
+            xaxis=dict(type='category', tickangle=-45, tickmode='array', 
+                        tickvals=hist_df.index[::round(len(hist_df.index) / 20)],  # Adjust this to get 2-3 months interval
+                        ticktext=[date.strftime('%Y-%m-%d') for date in hist_df.index[::round(len(hist_df.index) / 20)]],
+                        tickformat='%Y-%m-%d',nticks=20),
             margin=dict(l=0, r=0, t=30, b=20),
-            height=600,
-            width=1200
+            height=400,
+            width=830
         )
         return fig
 
@@ -92,13 +98,14 @@ def home(request, ticker="^GSPC"):
 
     if hist_df.empty:
         context.update({
-            "tickers": zip(tickers, names),
+            "tickers": zip(tickers, names, countries),
             "ticker": ticker,
             "chart_div": "No data available for this ticker.",
             "close": "N/A",
             "change": "N/A",
             "pct_change": "N/A",
             "last_close": "N/A",
+            "Country" : "N/A",
             "high_52wk": "N/A",
             "low_52wk": "N/A"
         })
@@ -113,6 +120,8 @@ def home(request, ticker="^GSPC"):
     p1, p2 = hist_df["Close"].values[-1], hist_df["Close"].values[-2]
     change, prcnt_change = (p2 - p1), (p2 - p1) / p1
 
+    country = next((countries[i] for i, t in enumerate(tickers) if t == ticker), "N/A")
+
     context.update({
         "tickers": zip(tickers, names, countries),
         "ticker": ticker,
@@ -122,6 +131,7 @@ def home(request, ticker="^GSPC"):
         "change": f"{change:.2f}",
         "pct_change": f"{prcnt_change * 100:.2f}%",
         "last_close": f"{last_close:.2f}",
+        "country" : country,
         "high_52wk": f"{high_52wk:.2f}",
         "low_52wk": f"{low_52wk:.2f}",
     

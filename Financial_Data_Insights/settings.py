@@ -46,6 +46,7 @@ EXTERNAL_APPS = [
     'UserAuth',
     'strategies',
     'dashboard',
+    'about_us',
 
 ]
 

@@ -51,10 +51,11 @@ class HoldingHistory(models.Model):
     def __str__(self):
         return f"{self.portfolio.user.username} - {self.ticker} - {self.sell_date} - {self.profit_loss}"
 
+
 class Watchlist(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     ticker = models.CharField(max_length=10)
-    
+
     def get_current_price(self):
         stock = yf.Ticker(self.ticker)
         current_price = stock.history(period="1d")['Close'].iloc[-1]  # Use iloc to avoid FutureWarning
