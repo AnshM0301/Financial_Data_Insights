@@ -550,6 +550,7 @@
         // Parse the JSON data
         const pieChartJson = JSON.parse('{{ pie_chart_json|escapejs }}');
         const barChartJson = JSON.parse('{{ bar_chart_json|escapejs }}');
+        const performanceChartJson = JSON.parse('{{ performance_chart_json|escapejs }}');
 
         // Render the Pie Chart
         Plotly.newPlot('sector-allocation-chart', pieChartJson.data, pieChartJson.layout);
@@ -557,8 +558,9 @@
         // Render the Bar Chart
         Plotly.newPlot('profit-loss-chart', barChartJson.data, barChartJson.layout);
 
-         var performanceChartData = {{ performance_chart_json|safe }};
-        Plotly.newPlot('performance-chart', performanceChartData.data, performanceChartData.layout);
+        // Render Line chart
+        Plotly.newPlot('performance-chart', performanceChartJson.data, performanceChartJson.layout);
+
 
         $(document).ready(function () {
             // Fetch and display current prices for watchlist

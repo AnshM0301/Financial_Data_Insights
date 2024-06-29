@@ -32,7 +32,7 @@ def search_company(request):
         if ticker:
             timeframe = request.GET.get('timeframe', '1d')
             hist_df, data = fetch_stock_data(ticker, timeframe, time_range)
-            if data is not None:
+            if hist_df is not None and data is not None:
                 fig = create_candlestick_chart(hist_df, data, company_name)
                 graph_div = fig.to_html(full_html=False)
                 latest_price = data['Close'].iloc[-1]
@@ -54,8 +54,12 @@ def search_company(request):
                     'charts': charts,
                 }, status=200)
             else:
-                return JsonResponse({'error': 'Company not found'}, status=404)
-            
+                print(f"No data available for {ticker} with time range {time_range} and timeframe {timeframe}")
+                return JsonResponse({'error': 'Company not found or no data available'}, status=404)
+        else:
+            print("Ticker symbol not provided")
+            return JsonResponse({'error': 'Ticker symbol not provided'}, status=400)
+        
 def technical_analysis_view(request, ticker):
     if request.method == 'GET':
         technical_chart, trend_status, indicator_description = technical_analysis(request, ticker)
@@ -76,14 +80,18 @@ def fetch_company_news_view(request):
 def fetch_stock_data(ticker, interval, time_range):
     try:
         data = yf.download(ticker, period=time_range, interval=interval)
+        if data.empty:
+            print(f"No data found for ticker: {ticker}, period: {time_range}, interval: {interval}")
+            return None, None
+        
         hist_df = data.reset_index()
         hist_df['Date'] = pd.to_datetime(hist_df['Date'])
         hist_df.set_index('Date', inplace=True)
 
-        return hist_df, data if not data.empty else None
+        return hist_df, data 
     except Exception as e:
         print(f"Error fetching data: {e}")      
-        return None
+        return None, None
 
 def fetch_financial_details(ticker):
     try:
@@ -123,6 +131,8 @@ def create_candlestick_chart(hist_df, data, company_name):
     ))
     fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', yaxis='y2'))
 
+    num_dates = len(hist_df.index)
+    step = max(1, round(num_dates / 20))  # Ensure the step is at least 1
 
     fig.update_layout(
         title=f'{company_name.capitalize()} Stock Price and Volume',
@@ -130,8 +140,8 @@ def create_candlestick_chart(hist_df, data, company_name):
         xaxis_rangeslider_visible=False,
         yaxis2=dict(title='Volume', overlaying='y', side='right',position=1.0, range=[0, 300_000_000]),
         xaxis=dict(type='category', tickangle=-45, tickmode='array', 
-                        tickvals=hist_df.index[::round(len(hist_df.index) / 20)],  # Adjust this to get 2-3 months interval
-                        ticktext=[date.strftime('%Y-%m-%d') for date in hist_df.index[::round(len(hist_df.index) / 20)]],
+                        tickvals=hist_df.index[::step],  # Adjust this to get 2-3 months interval
+                        ticktext=[date.strftime('%Y-%m-%d') for date in hist_df.index[::step]],
                         tickformat='%Y-%m-%d',nticks=20),
         margin=dict(l=0, r=0, t=30, b=20),
         height=600,

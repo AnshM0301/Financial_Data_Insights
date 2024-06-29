@@ -13,7 +13,6 @@ import plotly.express as px
 import plotly.io as pio
 import plotly.graph_objects as go
 import numpy as np
-from scipy.stats import norm
 import pandas as pd
 from django.contrib.auth.decorators import login_required
 
@@ -84,6 +83,9 @@ def fetch_historical_data(ticker, date):
     return None
 
 def generate_performance_chart(user):
+    # ... (other code)
+
+    # Daily investment and net worth calculations
     holdings = Holding.objects.filter(portfolio__user=user).order_by('buy_date')
     
     if not holdings:
@@ -120,10 +122,15 @@ def generate_performance_chart(user):
         daily_investment.append(cumulative_investment)
         daily_net_worth.append(net_worth)
 
+    # ... (code to calculate daily_investment and daily_net_worth)
+
     max_value = max(daily_net_worth + daily_investment)
     min_value = min(daily_net_worth + daily_investment)
+    # Define maximum and minimum values for the y-axis
+
 
     fig = go.Figure()
+    # Add traces for investment and net worth
     fig.add_trace(go.Scatter(x=dates, y=daily_investment, mode='lines+markers', name='Investment Value', line=dict(color='blue')))
     fig.add_trace(go.Scatter(x=dates, y=daily_net_worth, mode='lines+markers', name='Net Worth', line=dict(color='green')))
 
@@ -134,7 +141,7 @@ def generate_performance_chart(user):
         yaxis=dict(range=[max(0, min_value - 5000), max_value + 5000]),
         template = 'plotly_dark'
     )
-
+    # Convert figure to JSON for sending to the template
     graph_json = json.loads(pio.to_json(fig, pretty=True))
 
     return graph_json
@@ -430,3 +437,4 @@ def remove_from_watchlist(request):
         return JsonResponse({'status': 'success'})
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
