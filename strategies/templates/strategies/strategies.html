@@ -833,7 +833,7 @@
                 <button data-range="1mo" class="btn btn-outline-secondary btn-time-range">1 Month</button>
                 <button data-range="6mo" class="btn btn-outline-secondary btn-time-range">6 Months</button>
                 <button data-range="1y" class="btn btn-outline-secondary btn-time-range">1 Year</button>
-                <button data-range="5y" class="btn btn-outline-secondary btn-time-range selected">5 Years</button>
+                <button data-range="5y" class="btn btn-outline-secondary btn-time-range" selected>5 Years</button>
                 <button data-range="max" class="btn btn-outline-secondary btn-time-range">Max</button>
             </div>
             <div class="chart-container">
@@ -905,11 +905,17 @@
                 </div>
             </div>
             <!--
-        <div class="status-box text-center">
-            <h4>Status: <span id="trend-status" class="badge badge-secondary">Neutral</span></h4>
-        </div>
-        -->
-            <div id="technical-chart" class="mt-4" style="height: 600px; width: 1000px;">{{ technical_chart|safe }}
+            <div class="status-box text-center">
+                <h4>Status: <span id="trend-status" class="badge badge-secondary">Neutral</span></h4>
+            </div>
+            -->
+            <div id="technical-chart" class="mt-4" style="height: 600px; width: 1000px;">{{ technical_chart|safe }}</div>
+            <div id="Performance-metrics" class="Performance-metrics">
+                <ul>
+                    <li>Total Return: {{ total_return|safe }}</li>
+                    <li>Sharpe Ratio: {{ sharpe_ratio|safe }}</li>
+                    <li>Max Drawdown: {{ max_drawdown|safe }}</li>
+                </ul>
             </div>
             <div id="indicator-summary" class="indicator-summary">
                 <p id="indicator-description"> {{ indicator_description|safe }} </p>
@@ -1060,6 +1066,17 @@
             function fetchData(timeRange = '5y') {
                 let companyName = $('#company-name').val() || 'GOOG';
                 let timeframe = $('#timeframe').val() || '1d';
+
+                // Adjust time range based on timeframe
+                if ('1m'.includes(timeframe)){
+                    timeRange = '5d';
+                }
+
+                if (['5m', '15m', '30m', '60m', '90m', '1h'].includes(timeframe)) {
+                    if (timeRange === '5y' || timeRange === 'max') {
+                        timeRange = '1mo'; // Set to 60 days for intraday data
+                    }
+                }
 
                 console.log('Fetching data with company name:', companyName, 'and time range:', timeRange);
 

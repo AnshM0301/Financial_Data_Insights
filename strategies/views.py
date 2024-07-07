@@ -7,6 +7,9 @@ import pandas as pd
 from django.contrib.auth.decorators import login_required
 import requests
 
+import numpy as np
+import json
+
 NEWS_API_KEY = 'a99f21bd3dae43bc962eb23c86600461' 
 
 @login_required(login_url="/UserAuth/login/")
@@ -14,12 +17,14 @@ def strategies(request):
     company_name = request.GET.get('company_name', 'GOOG')
     print(f"Company Name from query: {company_name}")  # Debug print statement
     news_articles = fetch_company_news(company_name)
-    technical_chart, trend_status, indicator_description = technical_analysis(request, company_name)
+    technical_chart, total_return, sharpe_ratio, max_drawdown, indicator_description = technical_analysis(request, company_name)
     context = {
         'company_name': company_name,
         'news_articles': news_articles,
         'technical_chart': technical_chart,
-        'trend_status': trend_status,
+        'total_return': total_return,
+        'sharpe_ratio': sharpe_ratio,
+        'max_drawdown': max_drawdown,
         'indicator_description': indicator_description
     }
     return render(request, 'strategies/strategies.html', context)
@@ -62,10 +67,12 @@ def search_company(request):
         
 def technical_analysis_view(request, ticker):
     if request.method == 'GET':
-        technical_chart, trend_status, indicator_description = technical_analysis(request, ticker)
+        technical_chart, total_return, sharpe_ratio, max_drawdown, indicator_description = technical_analysis(request, ticker)
         return JsonResponse({
             'technical_chart': technical_chart,
-            'trend_status': trend_status,
+            'total_return': total_return,
+            'sharpe_ratio': sharpe_ratio,
+            'max_drawdown': max_drawdown,
             'indicator_description': indicator_description
         }, status=200)
     
@@ -84,8 +91,13 @@ def fetch_stock_data(ticker, interval, time_range):
             print(f"No data found for ticker: {ticker}, period: {time_range}, interval: {interval}")
             return None, None
         
-        hist_df = data.reset_index()
-        hist_df['Date'] = pd.to_datetime(hist_df['Date'])
+         # Determine if the data is intraday or daily/weekly
+        if interval in ['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h']:
+            hist_df = data.reset_index()
+            hist_df['Date'] = pd.to_datetime(hist_df['Datetime'])
+        else:
+            hist_df = data.reset_index()
+            hist_df['Date'] = pd.to_datetime(hist_df['Date'])
         hist_df.set_index('Date', inplace=True)
 
         return hist_df, data 
@@ -292,7 +304,6 @@ def create_financial_charts(ticker, time_range):
 
 def technical_analysis(request, ticker):
     data = yf.download(tickers=ticker, period='1y', interval='1d')
-
     hist_df = data.reset_index()
     hist_df['Date'] = pd.to_datetime(hist_df['Date'])
     hist_df.set_index('Date', inplace=True)
@@ -316,15 +327,80 @@ def technical_analysis(request, ticker):
 
     indicator_description = ""
 
-    # Trend status
-    trend_status = "Neutral"
+    total_return = ""
+    sharpe_ratio = ""
+    max_drawdown = ""
 
+
+    # Trend status
+    # trend_status = "Neutral"
+    # if data['Close'].iloc[-1] > data['Close'].iloc[-2]:
+    #     trend_status = "Bullish"
+    #  elif data['Close'].iloc[-1] < data['Close'].iloc[-2]:
+#         trend_status = "Bearish"
+    #     indicator_description += f"Trend Status: {trend_status}\n"
+    #     
+    # else:
+    #   indicator_description += f"Trend Status: Neutral\n"
+
+    confirmation_period=20
    
     if 'vwap' in indicators:
         vwap = (data['Volume'] * (data['High'] + data['Low'] + data['Close']) / 3).cumsum() / data['Volume'].cumsum()
         print("VWAP calculated")  # Debug statement
-        fig.add_trace(go.Scatter(x=data.index, y=vwap, mode='lines', name='VWAP'))
-        indicator_description += "<p>VWAP is the Volume Weighted Average Price. It provides insight into the average price a security has traded at throughout the day, based on both volume and price.</p>"
+        indicator_description += "<p>VWAP is the Volume Weighted Average Price. It provides insight into the average price a security has traded at throughout the day, based on both volume and price. It is calculated by dividing the sum of the product of the price and volume for each transaction by the total volume for the period.</p>"
+
+        data['vwap'] = vwap
+
+        short_window = 20
+        data['short_mavg'] = data['Close'].rolling(window=short_window, min_periods=1).mean()
+
+        # Generate buy signals
+        data['Buy_Signal'] = np.where((data['short_mavg'] > data['vwap']) & (data['short_mavg'].shift(1) <= data['vwap'].shift(1)), 1, 0)
+        # Generate sell signals
+        data['Sell_Signal'] = np.where((data['short_mavg'] < data['vwap']) & (data['short_mavg'].shift(1) >= data['vwap'].shift(1)), -1, 0)
+
+        # Combine buy and sell signals into a single signal column
+        data['Confirmed_Signal'] = data['Buy_Signal'] + data['Sell_Signal']
+
+        # Debug output to inspect signals
+        print(data[['Close', 'vwap', 'short_mavg', 'Buy_Signal', 'Sell_Signal', 'Confirmed_Signal']].tail(30))
+
+        # Calculate returns based on the confirmed signals
+        data['Returns'] = data['Close'].pct_change()
+        data['Strategy_Returns'] = data['Returns'] * data['Confirmed_Signal'].shift(1)
+        data['Cumulative_Returns'] = (1 + data['Strategy_Returns']).cumprod()
+
+        # Performance metrics
+        total_return = data['Cumulative_Returns'].iloc[-1] - 1
+        sharpe_ratio = data['Strategy_Returns'].mean() / data['Strategy_Returns'].std() * (252**0.5)  # Annualized Sharpe ratio
+        max_drawdown = (data['Cumulative_Returns'].cummax() - data['Cumulative_Returns']).max()
+
+        fig.add_trace(go.Scatter(x=data.index, y=data['vwap'], mode='lines', name='VWAP'))
+        fig.add_trace(go.Scatter(x=data.index, y=data['short_mavg'], mode='lines', name='Short-term Moving Average'))
+
+        buy_signals = data[data['Buy_Signal'] == 1]
+        sell_signals = data[data['Sell_Signal'] == -1]
+
+        fig.add_trace(go.Scatter(
+            x=buy_signals.index,
+            y=buy_signals['Close'],
+            mode='markers',
+            marker=dict(color='green', symbol='triangle-up', size=10),
+            name='Buy Signal'
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=sell_signals.index,
+            y=sell_signals['Close'],
+            mode='markers',
+            marker=dict(color='red', symbol='triangle-down', size=10),
+            name='Sell Signal'
+        ))
+
+        fig.update_layout(title='Backtesting Results with VWAP and Short-term Moving Average', xaxis_title='Date', yaxis_title='Price')
+
+
 
     if 'ema50' in indicators:
         ema50 = data['Close'].ewm(span=50, adjust=False).mean()
@@ -339,14 +415,70 @@ def technical_analysis(request, ticker):
         indicator_description += "<p>The 200-Day EMA is a long-term trend indicator.</p>"
 
     if 'bollinger_bands' in indicators:
+        # Calculate Bollinger Bands
         rolling_mean = data['Close'].rolling(window=20).mean()
         rolling_std = data['Close'].rolling(window=20).std()
         upper_band = rolling_mean + (rolling_std * 2)
         lower_band = rolling_mean - (rolling_std * 2)
-        print("Bollinger Bands calculated")  # Debug statement
+        print("Bollinger Bands calculated")
+        
+        indicator_description += "<p>Bollinger Bands are a volatility indicator that consists of a set of three lines drawn in relation to securities prices. The middle line is usually a simple moving average, and the upper and lower lines are derived by adding and subtracting a standard deviation (usually two) from the middle line.</p>"
+
+        # Detect Bollinger Band Squeeze
+        data['BandWidth'] = (upper_band - lower_band) / rolling_mean
+        squeeze_threshold = data['BandWidth'].rolling(window=120).min()
+        data['Squeeze'] = data['BandWidth'] == squeeze_threshold
+
+        # Reversal signals
+        data['Buy_Signal'] = ((data['Close'] < lower_band) & (data['Close'].shift(1) < data['Open'].shift(1)) & (data['Close'] > data['Open'])).astype(int)
+        data['Sell_Signal'] = ((data['Close'] > upper_band) & (data['Close'].shift(1) > data['Open'].shift(1)) & (data['Close'] < data['Open'])).astype(int)
+
+        # Use middle band as support/resistance
+        data['Middle_Band_Buy'] = ((data['Close'] > rolling_mean) & (data['Close'].shift(1) < rolling_mean)).astype(int)
+        data['Middle_Band_Sell'] = ((data['Close'] < rolling_mean) & (data['Close'].shift(1) > rolling_mean)).astype(int)
+
+        # Combine all signals
+        data['Buy_Signal'] = data[['Buy_Signal', 'Middle_Band_Buy']].max(axis=1)
+        data['Sell_Signal'] = data[['Sell_Signal', 'Middle_Band_Sell']].max(axis=1)
+        data['Confirmed_Signal'] = data['Buy_Signal'] - data['Sell_Signal']
+
+        # Debug output to inspect signals
+        # print(data[['Close', 'upper_band', 'lower_band', 'Buy_Signal', 'Sell_Signal', 'Confirmed_Signal']].tail(30))
+
+        # Calculate returns based on the confirmed signals
+        data['Returns'] = data['Close'].pct_change()
+        data['Strategy_Returns'] = data['Returns'] * data['Confirmed_Signal'].shift(1)
+        data['Cumulative_Returns'] = (1 + data['Strategy_Returns']).cumprod()
+
+        # Performance metrics
+        total_return = data['Cumulative_Returns'].iloc[-1] - 1
+        sharpe_ratio = data['Strategy_Returns'].mean() / data['Strategy_Returns'].std() * (252**0.5)  # Annualized Sharpe ratio
+        max_drawdown = (data['Cumulative_Returns'].cummax() - data['Cumulative_Returns']).max()
+
         fig.add_trace(go.Scatter(x=data.index, y=upper_band, mode='lines', name='Upper Bollinger Band'))
         fig.add_trace(go.Scatter(x=data.index, y=lower_band, mode='lines', name='Lower Bollinger Band'))
-        indicator_description += "<p>Bollinger Bands are a volatility indicator that consists of a set of three lines drawn in relation to securities prices. The middle line is usually a simple moving average, and the upper and lower lines are derived by adding and subtracting a standard deviation (usually two) from the middle line.</p>"
+        fig.add_trace(go.Scatter(x=data.index, y=rolling_mean, mode='lines', name='Middle Bollinger Band'))
+
+        buy_signals = data[data['Buy_Signal'] == 1]
+        sell_signals = data[data['Sell_Signal'] == 1]
+        
+        fig.add_trace(go.Scatter(
+            x=buy_signals.index,
+            y=buy_signals['Close'],
+            mode='markers',
+            marker=dict(color='green', symbol='triangle-up', size=10),
+            name='Buy Signal'
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=sell_signals.index,
+            y=sell_signals['Close'],
+            mode='markers',
+            marker=dict(color='red', symbol='triangle-down', size=10),
+            name='Sell Signal'
+        ))
+
+        fig.update_layout(title='Backtesting Results with Bollinger Bands', xaxis_title='Date', yaxis_title='Price')
 
     if 'rsi' in indicators:
         delta = data['Close'].diff()
@@ -356,6 +488,8 @@ def technical_analysis(request, ticker):
         rsi = 100 - (100 / (1 + rs))
         print("RSI calculated")  # Debug statement
         fig.add_trace(go.Scatter(x=data.index, y=rsi, mode='lines', name='RSI'))
+        # fig.add_hline(y=70, line_width=1, line_color='red', line_dash='dash', name='Overbought (70)')
+        # fig.add_hline(y=30, line_width=1, line_color='green', line_dash='dash', name='Oversold (30)')
         indicator_description += "<p>RSI (Relative Strength Index) is a momentum oscillator that measures the speed and change of price movements. It oscillates between zero and 100. Traditionally, and according to Wilder, RSI is considered overbought when above 70 and oversold when below 30.</p>"
 
     if 'macd' in indicators:
@@ -401,7 +535,7 @@ def technical_analysis(request, ticker):
     )
     technical_chart = fig.to_html(full_html=False)
 
-    return technical_chart, trend_status, indicator_description
+    return technical_chart, total_return, sharpe_ratio, max_drawdown, indicator_description
 
 def fetch_company_news(company_name):
 #  url = f'https://newsapi.org/v2/top-headlines?category=business&language=en&pageSize=20&apiKey={NEWS_API_KEY}'
